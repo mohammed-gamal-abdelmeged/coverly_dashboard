@@ -1,22 +1,20 @@
 {
-  "name": "Coverly Admin Dashboard",
-  "short_name": "Coverly Admin",
-  "description": "Coverly Dashboard Management Panel",
-  "start_url": "/",
-  "display": "standalone",
-  "background_color": "#0b0b1a",
-  "theme_color": "#6b3aa8",
-  "orientation": "portrait",
+  "name": "Coverly",
+  "short_name": "Coverly",
   "icons": [
     {
-      "src": "/IMG_4195.png",
+      "src": "/logo.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "/IMG_4195.png",
+      "src": "/logo.png",
       "sizes": "512x512",
       "type": "image/png"
     }
-  ]
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#800080",
+  "theme_color": "#800080"
 }
