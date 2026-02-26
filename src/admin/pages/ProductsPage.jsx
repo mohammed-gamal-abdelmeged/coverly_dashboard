@@ -84,7 +84,7 @@ export default function ProductsPage() {
     if (!picked.length) return;
 
     // ✅ اختياري: حد أقصى (مثلاً 10 صور)
-    const next = [...files, ...picked].slice(0, 10);
+    const next = [...files, ...picked].slice(0, 100);
     setFiles(next);
 
     // عشان تقدر تختار نفس الملف تاني
