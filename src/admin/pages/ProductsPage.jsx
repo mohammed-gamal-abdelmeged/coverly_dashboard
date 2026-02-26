@@ -16,6 +16,7 @@ const CATEGORY_SLUGS = [
   "mats",
   "sea",
   "creative",
+  "specialized",
 ];
 
 export default function ProductsPage() {
