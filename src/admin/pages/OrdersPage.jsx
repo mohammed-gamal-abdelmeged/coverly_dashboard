@@ -30,6 +30,7 @@ export default function OrdersPage() {
     }
   };
 
+  // تحميل أولي + تغيير تبويب
   useEffect(() => {
     let ignore = false;
     (async () => {
@@ -46,14 +47,40 @@ export default function OrdersPage() {
     };
   }, [activeStatus]);
 
+  // ✅ Sync سريع من الكاش عند الرجوع للصفحة (Focus / Visibility)
+  useEffect(() => {
+    let alive = true;
+
+    const syncFromCache = async () => {
+      try {
+        const res = await ordersApi.listOrders({ status: activeStatus, q });
+        if (alive) setOrders(res);
+      } catch {
+        // ignore
+      }
+    };
+
+    const onFocus = () => syncFromCache();
+    const onVis = () => {
+      if (document.visibilityState === "visible") syncFromCache();
+    };
+
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVis);
+
+    return () => {
+      alive = false;
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, [activeStatus, q]);
+
   const onSearch = async (e) => {
     e.preventDefault();
     await loadOrders({ status: activeStatus, q });
   };
 
-  // ✅ زرار ريفريش: يعيد جلب الطلبات حسب التبويب الحالي
   const onRefresh = async () => {
-    // لو عايزه مايمسحش البحث: شيل السطرين دول
     setQ("");
     await loadOrders({ status: activeStatus, q: "" });
   };
@@ -92,7 +119,6 @@ export default function OrdersPage() {
             {loading ? "..." : `${orders.length} طلب`}
           </span>
 
-          {/* ✅ Refresh */}
           <button
             onClick={onRefresh}
             disabled={loading}
@@ -104,11 +130,10 @@ export default function OrdersPage() {
               }`}
             title="تحديث الطلبات"
           >
-            <RefreshCw size={16} className={loading ? "" : ""} />
+            <RefreshCw size={16} />
             ريفريش
           </button>
 
-          {/* 🗑️ Delete All */}
           <button
             onClick={onDeleteAll}
             disabled={loading}
@@ -174,7 +199,11 @@ export default function OrdersPage() {
             <OrderCard
               key={o.id}
               order={o}
-              onOpen={() => navigate(`/admin/orders/${o.id}`)}
+              onOpen={() =>
+                navigate(`/admin/orders/${o.id}`, {
+                  state: { orderSummary: o },
+                })
+              }
             />
           ))
         )}

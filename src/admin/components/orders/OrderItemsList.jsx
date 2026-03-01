@@ -31,6 +31,11 @@ export default function OrderItemsList({ items = [] }) {
                 <div className="text-xs text-white/60 mt-1">
                   السعر: <span className="text-white">{it.price} جنيه</span>
                 </div>
+                {it.notes ? (
+                      <div className="mt-1 text-xs text-white/60">
+                        <span className="text-white/40">ملاحظة:</span> {it.notes}
+                      </div>
+                    ) : null}
               </div>
 
               <div className="text-right">

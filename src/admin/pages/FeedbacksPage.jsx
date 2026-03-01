@@ -1,53 +1,34 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Plus, Trash2, Image as ImageIcon, RefreshCw, Upload, X } from "lucide-react";
-import { productsApi } from "../services/api.js";
+import { feedbacksApi } from "../services/feedbacksApi.js";
 
-const CATEGORY_SLUGS = [
-  "couples",
-  "cartoon",
-  "football",
-  "stars",
-  "fyonka",
-  "flowers",
-  "hearts",
-  "backgrounds",
-  "butterflies",
-  "animals",
-  "mats",
-  "sea",
-  "creative",
-  "specialized",
-];
-
-export default function ProductsPage() {
-  const [categorySlug, setCategorySlug] = useState(CATEGORY_SLUGS[0] || "");
+export default function FeedbacksPage() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Add form
   const [openAdd, setOpenAdd] = useState(false);
-  const [files, setFiles] = useState([]); // ✅ بدل file
-  const [previews, setPreviews] = useState([]); // ✅ صور للعرض
+  const [files, setFiles] = useState([]); // ✅ multiple
+  const [previews, setPreviews] = useState([]); // ✅ preview urls
   const [saving, setSaving] = useState(false);
 
-  // ✅ Progress حقيقي (على مستوى عدد الصور)
+  // ✅ Progress (عدد الصور)
   const [uploadTotal, setUploadTotal] = useState(0);
   const [uploadDone, setUploadDone] = useState(0);
   const [uploadName, setUploadName] = useState("");
 
   const fileInputRef = useRef(null);
 
-  const canSave = useMemo(
-    () => files.length > 0 && !!categorySlug?.trim(),
-    [files, categorySlug]
-  );
+  const canSave = useMemo(() => files.length > 0, [files]);
 
   const load = async () => {
-    if (!categorySlug) return;
     setLoading(true);
     try {
-      const res = await productsApi.listByCategorySlug(categorySlug);
-      setItems(res);
+      const res = await feedbacksApi.list();
+      setItems(Array.isArray(res) ? res : []);
+    } catch (e) {
+      alert(e?.message || "حصل خطأ أثناء تحميل الفيدباكس");
+      setItems([]);
     } finally {
       setLoading(false);
     }
@@ -56,11 +37,10 @@ export default function ProductsPage() {
   useEffect(() => {
     let ignore = false;
     (async () => {
-      if (!categorySlug) return;
       setLoading(true);
       try {
-        const res = await productsApi.listByCategorySlug(categorySlug);
-        if (!ignore) setItems(res);
+        const res = await feedbacksApi.list();
+        if (!ignore) setItems(Array.isArray(res) ? res : []);
       } finally {
         if (!ignore) setLoading(false);
       }
@@ -68,7 +48,7 @@ export default function ProductsPage() {
     return () => {
       ignore = true;
     };
-  }, [categorySlug]);
+  }, []);
 
   // ✅ إنشاء previews + تنظيفها
   useEffect(() => {
@@ -83,7 +63,7 @@ export default function ProductsPage() {
     const picked = Array.from(e.target.files || []);
     if (!picked.length) return;
 
-    // ✅ اختياري: حد أقصى (مثلاً 10 صور)
+    // ✅ نفس منطق المنتجات (حد كبير)
     const next = [...files, ...picked].slice(0, 100);
     setFiles(next);
 
@@ -96,6 +76,7 @@ export default function ProductsPage() {
   };
 
   const resetAddModal = () => {
+    if (saving) return;
     setOpenAdd(false);
     setFiles([]);
     setUploadTotal(0);
@@ -115,15 +96,16 @@ export default function ProductsPage() {
     setUploadName("");
 
     try {
-      // ✅ نرفعهم واحد واحد بنفس الدالة
+      // ✅ رفع واحد واحد (زي المنتجات)
       for (let i = 0; i < files.length; i++) {
         const f = files[i];
         setUploadName(f?.name || `صورة ${i + 1}`);
 
         try {
-          await productsApi.create({ file: f, category_slug: categorySlug });
+          // ✅ يرفع الصورة ثم يسجلها في feedbacks
+          await feedbacksApi.createFromFile(f);
         } finally {
-          // ✅ حتى لو حصل فشل لصورة معينة، هنحدّث العداد عشان البار يتحرك
+          // ✅ حتى لو صورة فشلت، العداد يتحرك
           setUploadDone(i + 1);
         }
       }
@@ -132,7 +114,7 @@ export default function ProductsPage() {
       setOpenAdd(false);
       await load();
     } catch (e) {
-      alert(e?.message || "حصل خطأ أثناء إضافة المنتج");
+      alert(e?.message || "حصل خطأ أثناء حفظ الفيدباكس");
     } finally {
       setSaving(false);
       setUploadName("");
@@ -142,9 +124,9 @@ export default function ProductsPage() {
   };
 
   const onDelete = async (id) => {
-    if (!confirm("متأكد إنك عايز تحذف المنتج؟")) return;
+    if (!confirm("متأكد إنك عايز تحذف الـ Feedback؟")) return;
     try {
-      await productsApi.remove(id);
+      await feedbacksApi.remove(id);
       await load();
     } catch (e) {
       alert(e?.message || "حصل خطأ أثناء الحذف");
@@ -159,7 +141,7 @@ export default function ProductsPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">المنتجات</h1>
+        <h1 className="text-xl font-bold">آراء العملاء (Feedbacks)</h1>
 
         <div className="flex items-center gap-2">
           <button
@@ -175,67 +157,46 @@ export default function ProductsPage() {
             className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#6B3AA8] hover:bg-[#7c4dff] transition text-sm font-semibold"
           >
             <Plus size={16} />
-            إضافة منتج
+            إضافة Feedback
           </button>
         </div>
       </div>
 
-      {/* اختيار القسم */}
-      <div className="rounded-2xl border border-white/10 bg-[#0B0814]/80 backdrop-blur-md p-4 space-y-2">
-        <div className="text-sm text-white/70">اختيار القسم</div>
-        <select
-          value={categorySlug}
-          onChange={(e) => setCategorySlug(e.target.value)}
-          className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-3 text-sm outline-none text-black"
-        >
-          {CATEGORY_SLUGS.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
-
-        <div className="text-xs text-white/50">
-          ضيفي/عدّلي قائمة الأقسام من ثابت{" "}
-          <code className="text-white/70">CATEGORY_SLUGS</code>
-        </div>
-      </div>
-
-      {/* قائمة المنتجات */}
+      {/* قائمة الفيدباكس */}
       <div className="space-y-3">
         {loading ? (
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-white/60">
-            جاري تحميل المنتجات...
+            جاري تحميل الفيدباكس...
           </div>
         ) : items.length === 0 ? (
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-white/60">
-            لا توجد منتجات في هذا القسم.
+            لا يوجد Feedbacks حالياً.
           </div>
         ) : (
-          items.map((p) => (
+          items.map((f) => (
             <div
-              key={p.id}
+              key={f.id}
               className="rounded-2xl border border-white/10 bg-[#0B0814]/80 backdrop-blur-md p-3 flex gap-3"
             >
               <div className="w-20 h-20 rounded-2xl overflow-hidden border border-white/10 bg-black/20 flex-shrink-0">
                 <img
-                  src={p.image_url}
-                  alt="product"
+                  src={f.image_url}
+                  alt="feedback"
                   className="w-full h-full object-cover"
                   loading="lazy"
                 />
               </div>
 
               <div className="flex-1">
-                <div className="text-sm text-white/60">#{p.id}</div>
-                <div className="font-semibold mt-1">{p.category_slug}</div>
+                <div className="text-sm text-white/60">#{f.id}</div>
+                <div className="font-semibold mt-1">Feedback Image</div>
                 <div className="text-xs text-white/50 mt-1">
-                  {new Date(p.created_at).toLocaleString()}
+                  {f.created_at ? new Date(f.created_at).toLocaleString() : ""}
                 </div>
               </div>
 
               <button
-                onClick={() => onDelete(p.id)}
+                onClick={() => onDelete(f.id)}
                 className="h-10 px-3 rounded-xl bg-red-500/15 border border-red-500/30 hover:bg-red-500/25 transition text-red-200 text-sm flex items-center gap-2"
               >
                 <Trash2 size={16} />
@@ -246,7 +207,7 @@ export default function ProductsPage() {
         )}
       </div>
 
-      {/* Modal Add */}
+      {/* Modal Add - نفس هندلة المنتجات */}
       {openAdd ? (
         <div className="fixed inset-0 z-[999] bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-3">
           <div className="relative w-full max-w-md rounded-3xl border border-white/10 bg-[#0B0814] p-4 space-y-4">
@@ -263,8 +224,7 @@ export default function ProductsPage() {
                         جاري رفع الصور... {percent}%
                       </div>
                       <div className="text-xs text-white/60 truncate">
-                        {uploadName ? `الآن: ${uploadName}` : " "
-                        }
+                        {uploadName ? `الآن: ${uploadName}` : " "}
                       </div>
                     </div>
                   </div>
@@ -292,7 +252,7 @@ export default function ProductsPage() {
             ) : null}
 
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold">إضافة منتج</h2>
+              <h2 className="text-lg font-bold">إضافة Feedback</h2>
               <button
                 onClick={resetAddModal}
                 className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition text-sm"
@@ -301,18 +261,11 @@ export default function ProductsPage() {
               </button>
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-              <div className="text-sm text-white/70 mb-2">القسم</div>
-              <div className="rounded-2xl border border-white/10 bg-black/20 px-3 py-3 text-sm">
-                {categorySlug}
-              </div>
-            </div>
-
             {/* ✅ Upload UI نضيف + multiple */}
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4 space-y-3">
               <div className="flex items-center gap-2 text-sm text-white/70">
                 <ImageIcon size={18} />
-                صور المنتج
+                صور الفيدباك
               </div>
 
               <input
@@ -358,11 +311,12 @@ export default function ProductsPage() {
                 </div>
               ) : (
                 <div className="text-xs text-white/50">
-                  اختار صور للمنتج. (حد أقصى 10 صور)
+                  اختار صور للفيدباك. (حد أقصى 100 صورة)
                 </div>
               )}
             </div>
 
+            {/* ✅ زر الحفظ موجود دايمًا زي المنتجات */}
             <button
               disabled={!canSave || saving}
               onClick={onCreate}

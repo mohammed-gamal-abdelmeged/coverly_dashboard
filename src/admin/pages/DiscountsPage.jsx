@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Plus, Trash2, Power, RefreshCw } from "lucide-react";
-import { discountsApi } from "../services/discountsApi.js";
-
+import { discountsApi } from "../services/api.js";
 export default function DiscountsPage() {
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState([]);

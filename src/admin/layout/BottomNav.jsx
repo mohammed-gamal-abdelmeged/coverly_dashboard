@@ -1,11 +1,14 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
-import { Home, Package, Grid, Tag, ShoppingCart } from "lucide-react";
+import { Home, Package, MessageSquareText, Tag, ShoppingCart } from "lucide-react";
 
 const navItems = [
   { name: "الرئيسية", path: "/admin/home", icon: Home },
   { name: "المنتجات", path: "/admin/products", icon: Package },
-  { name: "التصنيفات", path: "/admin/categories", icon: Grid },
+
+  // ✅ بدل "التصنيفات"
+  { name: "آراء العملاء", path: "/admin/feedbacks", icon: MessageSquareText },
+
   { name: "الخصومات", path: "/admin/discounts", icon: Tag },
   { name: "الطلبات", path: "/admin/orders", icon: ShoppingCart },
 ];

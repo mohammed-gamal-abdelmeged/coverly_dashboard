@@ -24,13 +24,12 @@ export default function DashboardHome() {
       const [total, pending, last] = await Promise.all([
         ordersApi.countAll(),
         ordersApi.countPending(),
-        ordersApi.latest(5),
+        ordersApi.latest(5), // ✅ summary خفيف
       ]);
 
       setCounts({ total, pending });
       setLatest(last || []);
     } catch (e) {
-      // لو حصل error، ما نوقفش الصفحة
       console.error(e);
     } finally {
       setLoading(false);
@@ -39,6 +38,7 @@ export default function DashboardHome() {
 
   useEffect(() => {
     let ignore = false;
+
     (async () => {
       setLoading(true);
       try {
@@ -120,7 +120,11 @@ export default function DashboardHome() {
             {latest.map((o) => (
               <button
                 key={o.id}
-                onClick={() => navigate(`/admin/orders/${o.id}`)}
+                onClick={() =>
+                  navigate(`/admin/orders/${o.id}`, {
+                    state: { orderSummary: o }, // ✅ ابعت summary للديتيلز
+                  })
+                }
                 className="w-full text-right rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition p-3"
               >
                 <div className="flex items-center justify-between">
@@ -146,7 +150,7 @@ export default function DashboardHome() {
       </div>
 
       <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-white/60 text-sm">
-        الآن: الصفحة الرئيسية أسرع (Counts بدون تحميل كل الأوردرات) + آخر 5 طلبات.
+        الآن: الهوم بيجيب Counts + Latest Summary بس، والـ Details تحمل التقيل عند الدخول.
       </div>
     </div>
   );

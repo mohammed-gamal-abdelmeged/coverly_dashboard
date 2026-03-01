@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Phone, MessageCircle, ArrowRight } from "lucide-react";
 import { ordersApi } from "../services/api.js";
 import PaymentProofViewer from "../components/orders/PaymentProofViewer.jsx";
@@ -17,47 +17,70 @@ const STATUS_LABELS = {
 export default function OrderDetailsPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [order, setOrder] = useState(null);
+  const location = useLocation();
 
-  const fetchOrder = async () => {
-    setLoading(true);
-    try {
-      const o = await ordersApi.getOrder(id);
-      setOrder(o || null);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const summary = location.state?.orderSummary || null;
+
+  const [order, setOrder] = useState(summary);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     let ignore = false;
+
     (async () => {
-      const o = await ordersApi.getOrder(id);
-      if (!ignore) {
-        setOrder(o || null);
-        setLoading(false);
+      setLoading(true);
+      try {
+        const o = await ordersApi.getOrder(id);
+        if (!ignore) setOrder(o || null);
+      } finally {
+        if (!ignore) setLoading(false);
       }
     })();
-    return () => { ignore = true; };
+
+    return () => {
+      ignore = true;
+    };
   }, [id]);
 
   const whatsappLink = useMemo(() => {
     if (!order?.phone) return "#";
-    const phone = order.phone.replace(/\D/g, "");
-    const msg = encodeURIComponent(`مرحبًا ${order.customer_name}، بخصوص طلب رقم #${order.id}`);
+    const phone = String(order.phone).replace(/\D/g, "");
+    const msg = encodeURIComponent(
+      `مرحبًا ${order.customer_name}، بخصوص طلب رقم #${order.id}`
+    );
     return `https://wa.me/2${phone}?text=${msg}`;
   }, [order]);
 
-  const callLink = useMemo(() => (order?.phone ? `tel:${order.phone}` : "#"), [order]);
+  const callLink = useMemo(
+    () => (order?.phone ? `tel:${order.phone}` : "#"),
+    [order]
+  );
 
+  // ✅ Optimistic Update (بدون refetch)
   const onChangeStatus = async (newStatus) => {
-    if (!order) return;
-    await ordersApi.updateOrderStatus(order.id, newStatus);
-    await fetchOrder();
+    if (!order || saving) return;
+
+    const prevStatus = order.status;
+
+    // 1) حدّث UI فورًا
+    setOrder((o) => ({ ...o, status: newStatus }));
+
+    // 2) ابعت للباك + (ordersApiHttp بيحدّث الكاش داخليًا)
+    setSaving(true);
+    try {
+      await ordersApi.updateOrderStatus(order.id, newStatus);
+      // ✅ مفيش fetchOrder هنا خلاص
+    } catch (e) {
+      // 3) لو فشل ارجع القديم
+      setOrder((o) => ({ ...o, status: prevStatus }));
+      alert(e?.message || "حصل خطأ أثناء تغيير حالة الطلب");
+    } finally {
+      setSaving(false);
+    }
   };
 
-  if (loading) {
+  if (loading && !order) {
     return (
       <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-white/60">
         جاري تحميل الطلب...
@@ -97,13 +120,24 @@ export default function OrderDetailsPage() {
           <div>
             <h1 className="text-xl font-bold">طلب رقم #{order.id}</h1>
             <p className="text-white/60 text-sm mt-1">
-              الحالة: <span className="text-white">{STATUS_LABELS[order.status]}</span>
+              الحالة:{" "}
+              <span className="text-white">
+                {STATUS_LABELS[order.status] || order.status}
+              </span>
+              {loading ? (
+                <span className="mr-2 text-xs text-white/40">(تحميل التفاصيل...)</span>
+              ) : null}
+              {saving ? (
+                <span className="mr-2 text-xs text-white/40">(جاري الحفظ...)</span>
+              ) : null}
             </p>
           </div>
 
           <div className="text-right">
             <div className="text-white/60 text-xs">الإجمالي</div>
-            <div className="text-2xl font-extrabold text-[#9B6DFF]">{order.total} جنيه</div>
+            <div className="text-2xl font-extrabold text-[#9B6DFF]">
+              {order.total} جنيه
+            </div>
           </div>
         </div>
       </div>
@@ -137,18 +171,25 @@ export default function OrderDetailsPage() {
         </div>
 
         <div className="border-t border-white/10 pt-3 text-sm text-white/70 space-y-1">
-          <div><span className="text-white/50">المحافظة:</span> {order.governorate}</div>
-          <div><span className="text-white/50">المدينة:</span> {order.city}</div>
-          <div><span className="text-white/50">العنوان:</span> {order.address_details}</div>
+          <div>
+            <span className="text-white/50">المحافظة:</span> {order.governorate}
+          </div>
+          <div>
+            <span className="text-white/50">العنوان:</span> {order.address_details}
+          </div>
           {order.notes ? (
-            <div><span className="text-white/50">ملاحظات:</span> {order.notes}</div>
+            <div>
+              <span className="text-white/50">ملاحظات:</span> {order.notes}
+            </div>
           ) : null}
         </div>
       </div>
 
       <PaymentProofViewer url={order.payment_screenshot_url} />
       <OrderItemsList items={order.items || []} />
-      <OrderActions status={order.status} onChangeStatus={onChangeStatus} />
+
+      {/* ✅ مرر loading */}
+      <OrderActions status={order.status} onChangeStatus={onChangeStatus} loading={saving} />
     </div>
   );
 }

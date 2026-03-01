@@ -5,7 +5,7 @@ import AdminLayout from "./layout/AdminLayout.jsx";
 // Pages
 import DashboardHome from "./pages/DashboardHome.jsx";
 import ProductsPage from "./pages/ProductsPage.jsx";
-import CategoriesPage from "./pages/CategoriesPage.jsx";
+import FeedbacksPage from "./pages/FeedbacksPage.jsx"; // ✅ NEW
 import DiscountsPage from "./pages/DiscountsPage.jsx";
 import OrdersPage from "./pages/OrdersPage.jsx";
 import OrderDetailsPage from "./pages/OrderDetailsPage.jsx";
@@ -18,7 +18,10 @@ export default function AdminApp() {
 
         <Route path="home" element={<DashboardHome />} />
         <Route path="products" element={<ProductsPage />} />
-        <Route path="categories" element={<CategoriesPage />} />
+
+        {/* ✅ بدل التصنيفات */}
+        <Route path="feedbacks" element={<FeedbacksPage />} />
+
         <Route path="discounts" element={<DiscountsPage />} />
 
         <Route path="orders" element={<OrdersPage />} />
