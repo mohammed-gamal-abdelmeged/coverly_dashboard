@@ -43,6 +43,7 @@ const mapOrderDetailsRow = (row) => {
     notes: row.notes || "",
 
     total: Number(row.total_amount || 0),
+    shipping_fee: Number(row.shipping_fee || 0), // 👈 ضيف دي
     status: normalizeStatus(row.status),
     payment_screenshot_url: row.payment_image || "",
     created_at: row.created_at,

@@ -171,17 +171,18 @@ export default function OrderDetailsPage() {
         </div>
 
         <div className="border-t border-white/10 pt-3 text-sm text-white/70 space-y-1">
-          <div>
+              <div>
+             <span className="text-white/50 font-extrabold">سعر الشحن:</span> <span className="font-extrabold text-yellow-400">{order.shipping_fee}</span>
+              </div>
+           <div>
             <span className="text-white/50">المحافظة:</span> {order.governorate}
           </div>
+          
           <div>
             <span className="text-white/50">العنوان:</span> {order.address_details}
           </div>
-          {order.notes ? (
-            <div>
-              <span className="text-white/50">ملاحظات:</span> {order.notes}
-            </div>
-          ) : null}
+          
+
         </div>
       </div>
 
